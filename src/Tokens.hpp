@@ -2,11 +2,13 @@
 #pragma once
 #include <cmath>
 #include <unordered_map>
-#include "Converter.hpp"
-
+#include <sstream>
 
 namespace Tokens 
 {
+	class Token;
+	using TokenMap = std::unordered_map<std::string, std::unique_ptr<Token>>;
+
 	enum class Type : int
 	{
 		NUMBER,
@@ -14,27 +16,6 @@ namespace Tokens
 		B_OPERATOR,
 		L_PARENTHESIS,
 		R_PARENTHESIS
-	};
-
-	enum class operatorID : int
-	{
-		PLUS, MINUS, MULTIPLICATION, DIVISION, EXPONENTIATION, SQRT, LG, LN,
-		SINE, COSINE, TANGENT, COTANGENT, ARCSINE, ARCCOSINE, ARCTANGENT, ARCCOTANGENT,
-		SECANT, COSECANT, ARCSECANT, ARCCOSECANT,
-		HYPERBOLICSINE, HYPERBOLICCOSINE, HYPERBOLICTANGENT, HYPERBOLICCOTANGENT
-	};
-
-	const std::unordered_map<std::string, operatorID> supportedOperators = {
-		{"+", operatorID::PLUS}, {"-", operatorID::MINUS},  {"*", operatorID::MULTIPLICATION}, {"/", operatorID::DIVISION}, 
-		{"^", operatorID::EXPONENTIATION}, {"sqrt", operatorID::SQRT}, {"lg", operatorID::LG}, {"ln", operatorID::LN} ,
-		{"sin", operatorID::SINE}, {"cos", operatorID::COSINE}, 
-		{"tan", operatorID::TANGENT}, {"cot", operatorID::COTANGENT},
-		{"asin", operatorID::ARCSINE}, {"acos", operatorID::ARCCOSINE},
-		{"atan", operatorID::ARCTANGENT}, {"acot", operatorID::ARCCOTANGENT},
-		{"sec", operatorID::SECANT}, {"csc", operatorID::COSECANT},
-		{"asec", operatorID::ARCSECANT}, {"acsc", operatorID::ARCCOSECANT},
-		{"hsin", operatorID::HYPERBOLICSINE}, {"hcos", operatorID::HYPERBOLICCOSINE},
-		{"htan", operatorID::HYPERBOLICTANGENT}, {"hcot", operatorID::HYPERBOLICCOTANGENT}
 	};
 
 	const int operatorMaxLength = 4;
@@ -45,6 +26,8 @@ namespace Tokens
 		Type getType() const { return type; }
 		virtual std::string toString() { return std::string("#"); }
 		virtual int getPriority() const { return 0; }
+		virtual std::unique_ptr<Token> clone() { return nullptr; }
+
 	private:
 		Type type;
 	};
@@ -53,12 +36,14 @@ namespace Tokens
 	public: 
 		LParenthesis() : Token(Type::L_PARENTHESIS) {}
 		std::string toString() override { return std::string("("); }
+		std::unique_ptr<Token> clone() override{ return std::make_unique<LParenthesis>(); }
 	};
 
 	class RParenthesis : public Token{
 	public: 
 		RParenthesis() : Token(Type::R_PARENTHESIS) {}
 		std::string toString() override { return std::string(")"); }
+		std::unique_ptr<Token> clone() override { return std::make_unique<RParenthesis>(); }
 	};
 
 	class Number : public Token {
@@ -66,7 +51,13 @@ namespace Tokens
 		Number(double value) : Token(Type::NUMBER) { this->value = value; }
 
 		double getValue() const { return value; }
-		std::string toString() override { return Converter::toString<double>(value); }
+		std::string toString() override 
+		{ 
+			std::ostringstream o;
+			o << value;
+			return o.str();
+		}
+		std::unique_ptr<Token> clone() override { return std::move(std::make_unique<Number>(getValue())); }
 
 	private:
 		double value;
@@ -96,6 +87,7 @@ namespace Tokens
 			return Number(A.getValue() + B.getValue());
 		}
 		std::string toString() override { return std::string("+"); }
+		std::unique_ptr<Token> clone() override { return std::make_unique<Plus>(); }
 	};
 
 	class Minus : public BOperator {
@@ -106,6 +98,7 @@ namespace Tokens
 			return Number(A.getValue() - B.getValue());
 		}
 		std::string toString() override { return std::string("-"); }
+		std::unique_ptr<Token> clone() override { return std::make_unique<Minus>(); }
 	};
 
 	class Multiplication : public BOperator {
@@ -116,6 +109,7 @@ namespace Tokens
 			return Number(A.getValue() * B.getValue());
 		}
 		std::string toString() override { return std::string("*"); }
+		std::unique_ptr<Token> clone() override { return std::make_unique<Multiplication>(); }
 	};
 
 	class Division : public BOperator {
@@ -126,6 +120,7 @@ namespace Tokens
 			return Number(A.getValue() / B.getValue());
 		}
 		std::string toString() override { return std::string("/"); }
+		std::unique_ptr<Token> clone() override { return std::make_unique<Division>(); }
 	};
 
 	class Exponentiation : public BOperator {
@@ -136,6 +131,7 @@ namespace Tokens
 			return Number(std::pow(A.getValue(), B.getValue()));
 		}
 		std::string toString() override { return std::string("^"); }
+		std::unique_ptr<Token> clone() override { return std::make_unique<Exponentiation>(); }
 	};
 
 	class UMinus : public UOperator {
@@ -144,7 +140,8 @@ namespace Tokens
 		{
 			return Number(-1 * A.getValue());
 		}
-		std::string toString() override { return std::string("-"); }
+		std::string toString() override { return std::string("-u"); }
+		std::unique_ptr<Token> clone() override { return std::make_unique<UMinus>(); }
 	};
 
 	class Logarithm10 : public UOperator {
@@ -154,6 +151,7 @@ namespace Tokens
 			return Number(std::log10(A.getValue()));
 		}
 		std::string toString() override { return std::string("log"); }
+		std::unique_ptr<Token> clone() override { return std::make_unique<Logarithm10>(); }
 	};
 
 	class LogarithmE : public UOperator {
@@ -163,6 +161,7 @@ namespace Tokens
 			return Number(std::log(A.getValue()));
 		}
 		std::string toString() override { return std::string("ln"); }
+		std::unique_ptr<Token> clone() override { return std::make_unique<LogarithmE>(); }
 	};
 
 	class Sqrt : public UOperator {
@@ -172,6 +171,7 @@ namespace Tokens
 			return Number(std::sqrt(A.getValue()));
 		}
 		std::string toString() override { return std::string("sqrt"); }
+		std::unique_ptr<Token> clone() override { return std::make_unique<Sqrt>(); }
 	};
 
 	class Sine : public UOperator {
@@ -181,6 +181,7 @@ namespace Tokens
 			return Number(std::sin(A.getValue()));
 		}
 		std::string toString() override { return std::string("sin"); }
+		std::unique_ptr<Token> clone() override { return std::make_unique<Sine>(); }
 	};
 
 	class Cosine : public UOperator {
@@ -190,6 +191,7 @@ namespace Tokens
 			return Number(std::cos(A.getValue()));
 		}
 		std::string toString() override { return std::string("cos"); }
+		std::unique_ptr<Token> clone() override { return std::make_unique<Cosine>(); }
 	};
 
 	class Tangent : public UOperator {
@@ -199,6 +201,7 @@ namespace Tokens
 			return Number(std::tan(A.getValue()));
 		}
 		std::string toString() override { return std::string("tan"); }
+		std::unique_ptr<Token> clone() override { return std::make_unique<Tangent>(); }
 	};
 
 	class Cotangent : public UOperator {
@@ -208,6 +211,7 @@ namespace Tokens
 			return Number(std::cos(A.getValue()) / std::sin(A.getValue()));
 		}
 		std::string toString() override { return std::string("cot"); }
+		std::unique_ptr<Token> clone() override { return std::make_unique<Cotangent>(); }
 	};
 
 	class Arcsine : public UOperator {
@@ -217,6 +221,7 @@ namespace Tokens
 			return Number(std::asin(A.getValue()));
 		}
 		std::string toString() override { return std::string("asin"); }
+		std::unique_ptr<Token> clone() override { return std::make_unique<Arcsine>(); }
 	};
 	
 	class Arccosine : public UOperator {
@@ -226,6 +231,7 @@ namespace Tokens
 			return Number(std::acos(A.getValue()));
 		}
 		std::string toString() override { return std::string("acos"); }
+		std::unique_ptr<Token> clone() override { return std::make_unique<Arccosine>(); }
 	};
 
 	class Arctangent : public UOperator {
@@ -235,6 +241,7 @@ namespace Tokens
 			return Number(std::atan(A.getValue()));
 		}
 		std::string toString() override { return std::string("atan"); }
+		std::unique_ptr<Token> clone() override { return std::make_unique<Arctangent>(); }
 	};
 
 	class Arccotangent : public UOperator {
@@ -244,6 +251,7 @@ namespace Tokens
 			return Number(std::atan(1. / A.getValue()));
 		}
 		std::string toString() override { return std::string("acot"); }
+		std::unique_ptr<Token> clone() override { return std::make_unique<Arccotangent>(); }
 	};
 
 	class Secant : public UOperator {
@@ -253,6 +261,7 @@ namespace Tokens
 			return Number(1. / std::cos(A.getValue()));
 		}
 		std::string toString() override { return std::string("sec"); }
+		std::unique_ptr<Token> clone() override { return std::make_unique<Secant>(); }
 	};
 
 	class Cosecant : public UOperator {
@@ -262,6 +271,7 @@ namespace Tokens
 			return Number(1. / std::sin(A.getValue()));
 		}
 		std::string toString() override { return std::string("csc"); }
+		std::unique_ptr<Token> clone() override { return std::make_unique<Cosecant>(); }
 	};
 
 	class Arcsecant : public UOperator {
@@ -271,6 +281,7 @@ namespace Tokens
 			return Number(std::acos(1. / A.getValue()));
 		}
 		std::string toString() override { return std::string("asec"); }
+		std::unique_ptr<Token> clone() override { return std::make_unique<Arcsecant>(); }
 	};
 
 	class Arccosecant : public UOperator {
@@ -280,6 +291,7 @@ namespace Tokens
 			return Number(std::asin(1. / A.getValue()));
 		}
 		std::string toString() override { return std::string("acsc"); }
+		std::unique_ptr<Token> clone() override { return std::make_unique<Arccosecant>(); }
 	};
 
 	class HyperbolicSine : public UOperator {
@@ -289,6 +301,7 @@ namespace Tokens
 			return Number((std::exp(A.getValue()) - std::exp(-A.getValue())) / 2.);
 		}
 		std::string toString() override { return std::string("hsin"); }
+		std::unique_ptr<Token> clone() override { return std::make_unique<HyperbolicSine>(); }
 	};
 
 	class HyperbolicCosine : public UOperator {
@@ -298,6 +311,7 @@ namespace Tokens
 			return Number((std::exp(A.getValue()) + std::exp(-A.getValue())) / 2.);
 		}
 		std::string toString() override { return std::string("hcos"); }
+		std::unique_ptr<Token> clone() override { return std::make_unique<HyperbolicCosine>(); }
 	};
 
 	class HyperbolicTangent : public UOperator {
@@ -307,6 +321,7 @@ namespace Tokens
 			return Number((std::exp(2. * A.getValue()) - 1) / (std::exp(2. * A.getValue()) + 1));
 		}
 		std::string toString() override { return std::string("htan"); }
+		std::unique_ptr<Token> clone() override { return std::make_unique<HyperbolicTangent>(); }
 	};
 
 	class HyperbolicCotangent : public UOperator {
@@ -316,6 +331,65 @@ namespace Tokens
 			return Number((std::exp(2. * A.getValue()) + 1) / (std::exp(2. * A.getValue()) - 1));
 		}
 		std::string toString() override { return std::string("hcot"); }
+		std::unique_ptr<Token> clone() override { return std::make_unique<HyperbolicCotangent>(); }
 	};
-}
 
+	class TokenMapInitializer 
+	{
+	public:
+		TokenMapInitializer() = delete;
+
+		static TokenMap parenthesesInit()
+		{
+			TokenMap parentheses;
+			add(parentheses, std::make_unique<LParenthesis>());
+			add(parentheses, std::make_unique<RParenthesis>());
+			return parentheses;
+		}
+
+		static TokenMap supportedOperatorsInit()
+		{
+			TokenMap operators;
+			add(operators, std::make_unique<Plus>());
+			add(operators, std::make_unique<Minus>());
+			add(operators, std::make_unique<UMinus>());
+			add(operators, std::make_unique<Multiplication>());
+			add(operators, std::make_unique<Division>());
+			add(operators, std::make_unique<Exponentiation>());
+			add(operators, std::make_unique<Sqrt>());
+			add(operators, std::make_unique<Logarithm10>());
+			add(operators, std::make_unique<LogarithmE>());
+
+			add(operators, std::make_unique<Sine>());
+			add(operators, std::make_unique<Cosine>());
+			add(operators, std::make_unique<Tangent>());
+			add(operators, std::make_unique<Cotangent>());
+
+			add(operators, std::make_unique<Arcsine>());
+			add(operators, std::make_unique<Arccosine>());
+			add(operators, std::make_unique<Arctangent>());
+			add(operators, std::make_unique<Arccotangent>());
+
+			add(operators, std::make_unique<Secant>());
+			add(operators, std::make_unique<Cosecant>());
+			add(operators, std::make_unique<Arcsecant>());
+			add(operators, std::make_unique<Arccosecant>());
+
+			add(operators, std::make_unique<HyperbolicSine>());
+			add(operators, std::make_unique<HyperbolicCosine>());
+			add(operators, std::make_unique<HyperbolicTangent>());
+			add(operators, std::make_unique<HyperbolicCotangent>());
+
+			return operators;
+		}
+
+	private:
+		static void add(TokenMap& m, std::unique_ptr<Token> token)
+		{
+			m.emplace(std::make_pair(token->toString(), std::move(token)));
+		}
+	};
+
+	TokenMap supportedOperators = TokenMapInitializer::supportedOperatorsInit();
+	TokenMap parentheses = TokenMapInitializer::parenthesesInit();
+}

@@ -5,7 +5,6 @@
 #include <unordered_map>
 #include "Tokens.hpp"
 #include "Sequence.hpp"
-#include "Converter.hpp"
 
 using namespace Tokens;
 
@@ -21,8 +20,7 @@ public:
 		for (size_t i = 0; i < s.length(); i++)
 		{
 			if (isDigit(s[i]) || s[i] == '.' || s[i] == ',') exploreNumber(s, seq, i);
-			else if (s[i] == '(') seq.pushLParenthesis();
-			else if (s[i] == ')') seq.pushRParenthesis();
+			else if (s[i] == '(' || s[i] == ')') exploreParenthesis(s, seq, i);
 			else if (s[i] != ' ') exploreOperator(s, seq, i);
 		}
 
@@ -30,6 +28,13 @@ public:
 	}
 
 private:
+
+	static void exploreParenthesis(std::string& s, Sequence& seq, size_t& i)
+	{
+		std::string temp;
+		temp += s[i];
+		seq.push_back(parentheses.at(temp)->clone());
+	}
 
 	static void exploreNumber(std::string& s, Sequence& seq, size_t& i) {
 		std::string temp;
@@ -47,7 +52,7 @@ private:
 		}
 
 		if (temp == ".") throw "incorrect input";
-		seq.pushNumber(Converter::fromString<double>(temp));
+		seq.pushNumber(std::stod(temp));
 	}
 
 	static void exploreOperator(std::string& s, Sequence& seq, size_t& i) {
@@ -67,7 +72,15 @@ private:
 			);
 		i--;
 
-		if (detected) seq.pushOperator(supportedOperators.at(temp));
+		if (detected) {
+			if (temp == "-") {
+				if (i == 0) temp = "-u";
+				else if (!(seq.back()->getType() == Type::NUMBER || seq.back()->getType() == Type::R_PARENTHESIS))
+					temp = "-u";
+			}
+			seq.push_back(supportedOperators.at(temp)->clone());
+		}
+			
 		else throw "incorrect input";
 	}
 

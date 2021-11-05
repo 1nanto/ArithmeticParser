@@ -3,7 +3,6 @@
 #include <vector>
 #include "Tokens.hpp"
 #include "Sequence.hpp"
-#include "Converter.hpp"
 
 using namespace Tokens;
 
