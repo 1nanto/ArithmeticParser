@@ -1,4 +1,3 @@
-//Anton Yarakhtin
 #pragma once
 #include <vector>
 #include <memory>

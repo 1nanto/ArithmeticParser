@@ -1,5 +1,5 @@
-//Anton Yarakhtin
 #pragma once
+#include <memory>
 #include <vector>
 #include "Tokens.hpp"
 #include "Sequence.hpp"

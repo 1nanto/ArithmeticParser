@@ -1,5 +1,5 @@
-//Anton Yarakhtin
 #pragma once
+#include <memory>
 #include <cmath>
 #include <unordered_map>
 #include <sstream>
